@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Specify the output folder
+# outputFolder="$HOME/Downloads/ExportedPlaylists"
+outputFolder="$PROJECT_PATH/data/exported-playlists"
+
+# Create the output folder if it doesn't exist
+mkdir -p "$outputFolder"
+
+osascript <<EOD
+tell application "Music"
+    set protectedPlaylists to {"Library", "Music", "Music Videos", "Recently Added", "Recently Played", "Top 25 Most Played"}
+    
+    set allPlaylists to name of every playlist
+    repeat with aPlaylist in allPlaylists
+        if aPlaylist is not in protectedPlaylists then
+            set playlistTracks to name of every track of playlist aPlaylist
+            set playlistContent to ""
+            repeat with aTrack in playlistTracks
+                set playlistContent to playlistContent & aTrack & linefeed
+            end repeat
+            
+            set playlistFileName to aPlaylist & ".txt"
+            --set playlistFilePath to POSIX file ("$outputFolder" & "/" & playlistFileName) as text
+            set playlistFilePath to "$outputFolder" & "/" & playlistFileName
+            do shell script "echo " & quoted form of playlistFilePath 
+            
+            -- Export playlist content to a Unicode text file
+            do shell script "echo " & quoted form of playlistContent & " > " & quoted form of playlistFilePath 
+        end if
+    end repeat
+end tell
+EOD

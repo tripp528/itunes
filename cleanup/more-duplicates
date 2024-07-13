@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+
+import os
+import profile
+import sys
+import glob
+
+formats = ["**/*.mp3", "**/*.mp4", "**/*.m4a", "**/*.flac", "**/*.wav", "**/*.ogg", "**/*.wma", "**/*.aac", "**/*.aiff", "**/*.alac", "**/*.dsd"]
+
+
+def remove_duplicates_from_secondary_dir(primary_dir, secondary_dir, dry_run=True, match_parent_dir=False, match_file_size=False):
+
+    # Get all files in primary directory
+    primary_files = []
+    for format in formats:
+        pattern = os.path.join(primary_dir, format)
+        primary_files.extend(glob.glob(pattern, recursive=True))
+
+    # Get all files in secondary directory
+    secondary_files = []
+    for format in formats:
+        pattern = os.path.join(secondary_dir, format)
+        secondary_files.extend(glob.glob(pattern, recursive=True))
+
+    count = 0
+    for primary_file in primary_files:
+        for secondary_file in secondary_files:
+            if os.path.basename(primary_file) == os.path.basename(secondary_file):
+
+                print("  Primary: ", primary_file)
+                print("Secondary: ", secondary_file)
+                print("")
+
+                # also check file size
+                if match_file_size == True:
+                    size1, size2 = os.path.getsize(primary_file), os.path.getsize(secondary_file)
+                    if size1 != size2:
+                        print(f"Skipping because file sizes are different: {size1} != {size2}\n")
+                        continue
+
+                # also check parent directory
+                if match_parent_dir == True:
+                    parent1, parent2 = os.path.basename(os.path.dirname(primary_file)), os.path.basename(os.path.dirname(secondary_file))
+                    if parent1 != parent2:
+                        print(f"Skipping because parent directories are different: {parent1} != {parent2}\n")
+                        continue
+
+                if dry_run == False:
+                    # move secondary file to .bak file 
+                    print("Moving secondary file to .bak file\n")
+                    os.rename(secondary_file, secondary_file + ".bak")
+                
+                count += 1
+
+    print("Found ", count, " duplicates")
+
+
+def remove_duplicates_from_subdirs(root, dry_run=True):
+
+    # Get all files in primary directory
+    files = []
+    for format in formats:
+        pattern = os.path.join(root, format)
+        files.extend(glob.glob(pattern, recursive=True))
+
+    count = 0
+    for file in files:
+        for secondary_file in files:
+            # check if the direct parent directory is the same
+            if os.path.basename(file) == os.path.basename(secondary_file) and file != secondary_file:
+
+                print("  Primary: ", file)
+                print("Secondary: ", secondary_file)
+                print("")
+
+                direct_parent_1 = os.path.basename(os.path.dirname(file))
+                direct_parent_2 = os.path.basename(os.path.dirname(secondary_file))
+                if direct_parent_1 != direct_parent_2:
+                    print(f"Skipping {os.path.basename(file)}, {direct_parent_1} != {direct_parent_2}")
+                    continue
+
+                if dry_run == False:
+
+                    # prompt user to delete secondary file
+                    print("Delete one of the files (changes to .bak)? p/s/n")
+                    answer = input()
+                    if answer == "p":
+                        print("Moving primary file to .bak file\n")
+                        os.rename(file, file + ".bak")
+                    elif answer == "s":
+                        print("Moving secondary file to .bak file\n")
+                        os.rename(secondary_file, secondary_file + ".bak")
+                    else:
+                        print("Skipping...")
+
+                count += 1
+
+    print("Found ", count, " duplicates")
+
+
+def restore_bak_files(root): 
+    # Get all files in primary directory
+    files = []
+    pattern = os.path.join(root, '**/*.bak')
+    files.extend(glob.glob(pattern, recursive=True))
+
+    count = 0
+    for file in files:
+        print("Restoring: ", file)
+        os.rename(file, file[:-4])
+        count += 1
+
+    print("Found ", count, " bak files")
+
+
+# function to find duplicates that are in the same directory but have one has a track number and the other doesn't
+def remove_duplicates_without_track_numbers(root, dry_run=True):
+    # Get all valid files in root
+    files = []
+    for format in formats:
+        pattern = os.path.join(root, format)
+        files.extend(glob.glob(pattern, recursive=True))
+
+    for file1 in files:
+        for file2 in files:
+            if file1 != file2 and os.path.dirname(file1) == os.path.dirname(file2):
+                # check if one has a track number and the other doesn't
+                # e.g. "01 moment.mp3" and "moment.mp3"
+                basename1 = os.path.basename(file1)
+                basename2 = os.path.basename(file2)
+                if basename1[3:] == basename2:
+                    print("  Primary: ", file1)
+                    print("Secondary: ", file2)
+                    print("")
+
+                    if dry_run == True:
+                        continue
+
+                    print("Delete one of the files (changes to .bak)? p/s/n")
+                    answer = input()
+                    if answer == "p":
+                        print("Moving primary file to .bak file\n")
+                        os.rename(file1, file1 + ".bak")
+                    elif answer == "s":
+                        print("Moving secondary file to .bak file\n")
+                        os.rename(file2, file2 + ".bak")
+                    else:
+                        print("Skipping...")
+
+
+
+if __name__ == "__main__":
+
+    # get first argument from command line as dry run flag (default to true)
+    dry_run = True
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "false":
+            dry_run = False
+
+    # restore_bak_files("/Users/tripp/Music/merged-itunes-media/")
+    
+    # remove_duplicates_from_secondary_dir(
+    #     primary_dir = "/Users/tripp/Music/merged-itunes-media/Music/",
+    #     # secondary_dir = "/Users/tripp/Music/merged-itunes-media/Unknown Artist/",
+    #     secondary_dir = "/Users/tripp/Music/merged-itunes-media/Compilations/",
+    #     dry_run = dry_run,
+    #     match_parent_dir = True,
+    #     match_file_size = False,
+    # )
+    
+    # remove_duplicates_from_subdirs(
+    #     root = "/Users/tripp/Music/merged-itunes-media/",
+    #     dry_run = dry_run
+    # )
+            
+    remove_duplicates_without_track_numbers(
+        root = "/Users/tripp/Music/merged-itunes-media/",
+        dry_run = dry_run
+    )
+    
+    

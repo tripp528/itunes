@@ -1,0 +1,30 @@
+#!/bin/bash
+
+
+library_dir=/Users/tripp/Music/merged-itunes-media
+
+backup_dir="$HOME/Library/Mobile Documents/com~apple~CloudDocs/backup/itunes-media-backup/"
+
+mkdir -p "$backup_dir"
+
+# default to dry run
+dry_run=true
+if [ "$1" == "--no-dry-run" ]; then
+    dry_run=false
+fi
+
+# Copy files and directories to $backup_dir
+# rsync "source" "destination"
+# -a is archive mode, which preserves permissions, ownership, etc.
+# -r is recursive mode, which copies directories and their contents
+# -v is verbose mode, which prints out each file as it's copied
+# --ignore-existing is a flag that tells rsync to not copy files that already exist in the destination directory
+
+cmd="rsync -avr --ignore-existing \"$library_dir\"/ \"$backup_dir\"/"
+
+if [ "$dry_run" == true ]; then
+    cmd="$cmd --dry-run"
+fi
+
+echo "$cmd"
+eval "$cmd"
